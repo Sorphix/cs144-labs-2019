@@ -61,12 +61,17 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         // the segment is already assembled or beyond capacity
         // "<=" indicate you cannot get a empty block when you cut off
         goto JUDGE_EOF;
-    }else if(index < _head_index) {
+    }else if(index < _head_index || index + data.size() > _head_index + _capacity - stream_out().buffer_size()) {
         // cut off the edge when needed
-        int offset = _head_index - index;
-        db.head_index = _head_index;
-        db.data.assign(data.begin() + offset, data.end());
-        db.length = data.size() - offset;
+        int offsetl = _head_index - index;
+        int offsetr = index + data.size() - _head_index - _capacity + stream_out().buffer_size();
+        offsetl = offsetl > 0? offsetl: 0;
+        offsetr = offsetr > 0? offsetr: 0;
+
+        if(offsetl > 0) db.head_index = _head_index;
+        else db.head_index = index;
+        db.data.assign(data.begin() + offsetl, data.end() - offsetr);
+        db.length = data.size() - offsetl - offsetr;
     }else {
         db.head_index = index;
         db.data.assign(data.begin(), data.end());
