@@ -37,8 +37,9 @@ string ByteStream::peek_output(const size_t len) const {
 
 //! \param[in] len bytes will be removed from the output side of the buffer
 void ByteStream::pop_output(const size_t len) {
-    _buffer.erase(0, len);
-    _nread += len;
+    size_t l = len > _buffer.size()? _buffer.size(): len;
+    _buffer.erase(0, l);
+    _nread += l;
 }
 
 void ByteStream::end_input() {

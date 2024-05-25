@@ -25,12 +25,28 @@ class TCPSender {
 
     //! retransmission timer for the connection
     unsigned int _initial_retransmission_timeout;
+    // RTO which could "exponential backoff"
+    unsigned int _retransmission_timeout;
 
     //! outgoing stream of bytes that have not yet been sent
     ByteStream _stream;
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    // window size of the sender, decided by remote receiver
+    size_t _window_size{0};
+    // absolute acknowledge number of the remote receiver
+    uint64_t _abs_ackno{0};
+    // segments sent but not be acked
+    std::queue<TCPSegment> _segments_not_ack{};
+
+    unsigned int _consecutive_retransmissions{0};
+    unsigned int _timer{0};
+    bool _timer_start_flag{true};
+
+    bool _syn_flag{false};
+    bool _fin_flag{false};
 
   public:
     //! Initialize a TCPSender
@@ -52,6 +68,10 @@ class TCPSender {
 
     //! \brief Generate an empty-payload segment (useful for creating empty ACK segments)
     void send_empty_segment();
+
+    // encapsulate the send step,
+    // NOT for retransmission
+    void send_segment(TCPSegment& seg);
 
     //! \brief create and send segments to fill as much of the window as possible
     void fill_window();
