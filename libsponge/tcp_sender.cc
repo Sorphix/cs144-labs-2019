@@ -50,7 +50,7 @@ void TCPSender::fill_window() {
         size_t real_length = seg.length_in_sequence_space();
         // FOR FIN SEG
         // stream.read has reach the bottom
-        if(real_length < length && _stream.input_ended()) {
+        if(real_length < window_size && _stream.eof()) {
             seg.header().fin = true;
             _fin_flag = true;
         }
@@ -72,13 +72,14 @@ bool TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     if(abs_ackno > _next_seqno) {
         return false;
     }
+    _window_size = window_size;
+
     // ack has been received
     if(abs_ackno < _abs_ackno) {
         return true;
     }
 
     _abs_ackno = abs_ackno;
-    _window_size = size_t(window_size);
     // pop segments before ackno in '_segments_not_ack'
     while(!_segments_not_ack.empty()) {
         TCPSegment seg = _segments_not_ack.front();
@@ -107,21 +108,19 @@ bool TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 void TCPSender::tick(const size_t ms_since_last_tick) {
     _timer += ms_since_last_tick;
 
-    if(_timer >= _retransmission_timeout) {
-        if(!_segments_not_ack.empty()) {
-            // retransmit
-            TCPSegment seg = _segments_not_ack.front();
-            _segments_out.push(seg);
-            // keep track of consecutive_retransmissions and double the RTO
-            _consecutive_retransmissions++;
-            _retransmission_timeout *= 2;
-            // restart the timer
-            _timer_start_flag = true;
-            _timer = 0;
-        }else {
-            // no need for timer
-            _timer_start_flag = false;
-        }
+    if(_timer >= _retransmission_timeout && !_segments_not_ack.empty()) {
+        // retransmit
+        TCPSegment seg = _segments_not_ack.front();
+        _segments_out.push(seg);
+        // keep track of consecutive_retransmissions and double the RTO
+        _consecutive_retransmissions++;
+        _retransmission_timeout *= 2;
+        // restart the timer
+        _timer_start_flag = true;
+        _timer = 0;
+    }
+    if(_segments_not_ack.empty()) {
+        _timer_start_flag = false;
     }
 }
 
