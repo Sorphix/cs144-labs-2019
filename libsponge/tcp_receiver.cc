@@ -39,7 +39,6 @@ bool TCPReceiver::segment_received(const TCPSegment &seg) {
         if(_has_fin)  // refuse redundant FIN
             return false;
         _has_fin = true;
-        stream_out().end_input();
     }
 
     // check seg's border to jump over 'push_substring'
