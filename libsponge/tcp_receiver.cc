@@ -27,7 +27,8 @@ bool TCPReceiver::segment_received(const TCPSegment &seg) {
 
         length --;
         abs_seqno = 1;
-
+        if(length == 0)
+            return true;
         // don't have received SYN
     }else if(!_has_syn) { 
         return false;
@@ -38,19 +39,19 @@ bool TCPReceiver::segment_received(const TCPSegment &seg) {
         if(_has_fin)  // refuse redundant FIN
             return false;
         _has_fin = true;
+        stream_out().end_input();
     }
 
     // check seg's border to jump over 'push_substring'
     // empty seg
     if(length == 0) {
-        if(seg.header().syn)
+        if(abs_seqno == _abs_checkpoint)
             return true;
         else
             return false;
     }
     // invalid seg
-    if(!seg.header().syn && !seg.header().fin &&
-        (abs_seqno >= _abs_checkpoint + window_size() || abs_seqno + length - 1 < _abs_checkpoint)) {
+    if((abs_seqno >= _abs_checkpoint + window_size() || abs_seqno + length - 1 < _abs_checkpoint)) {
         return false;
     }
 

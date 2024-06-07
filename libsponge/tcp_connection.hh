@@ -19,7 +19,13 @@ class TCPConnection {
     //! Should the TCPConnection stay active (and keep ACKing)
     //! for 10 * _cfg.rt_timeout milliseconds after both streams have ended,
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
+    // 挥手协议中被动关闭的一方不需要linger
     bool _linger_after_streams_finish{true};
+
+    bool _active{true};
+    bool _ready_to_send{false};
+
+    size_t _time_since_last_segment_received{0};
 
   public:
     //! \name "Input" interface for the writer
@@ -34,6 +40,9 @@ class TCPConnection {
 
     //! \returns the number of `bytes` that can be written right now.
     size_t remaining_outbound_capacity() const;
+
+    //! \brief outbound byte stream
+    ByteStream &outbound_stream() { return _sender.stream_in(); }
 
     //! \brief Shut down the outbound byte stream (still allows reading incoming data)
     void end_input_stream();
@@ -78,6 +87,16 @@ class TCPConnection {
     //! \returns `true` if either stream is still running or if the TCPConnection is lingering
     //! after both streams have finished (e.g. to ACK retransmissions from the peer)
     bool active() const;
+    //!@}
+
+    //! \name helper function
+
+    //!@{
+    //! \brief push sender's segments out
+    void senders_segments_out();
+
+    //! \brief unclean closure of connection
+    void unclean_close(bool);
     //!@}
 
     //! Construct a new connection from a configuration
